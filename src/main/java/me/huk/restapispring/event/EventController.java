@@ -1,5 +1,6 @@
 package me.huk.restapispring.event;
 
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.hateoas.MediaTypes;
 import org.springframework.hateoas.mvc.ControllerLinkBuilder;
@@ -18,8 +19,15 @@ public class EventController {
     @Autowired
     EventRepository eventRepository;
 
+    @Autowired
+    ModelMapper modelMapper;
+
     @PostMapping
-    public ResponseEntity createEvent(@RequestBody Event event){
+    public ResponseEntity createEvent(@RequestBody EventDto eventDto){
+
+        Event event = modelMapper.map(eventDto,Event.class);
+        // 6-2. eventDto --> event로 할당해준다.(물론 reflection이 발생하여 속도가 좀 느림)
+
         Event savedEvent = eventRepository.save(event);
         URI createdUri = ControllerLinkBuilder.
                 linkTo(EventController.class).slash(savedEvent.getId()).toUri();
