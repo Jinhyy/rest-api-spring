@@ -3,8 +3,10 @@ package me.huk.restapispring.event;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -18,13 +20,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @RunWith(SpringRunner.class)
-@WebMvcTest
+@WebMvcTest     // 슬라이스 테스트이기 때문에 웹용빈만 등록, repository는 등록x
 public class EventControllerTest {
     @Autowired
     MockMvc mockMvc;
 
     @Autowired
     ObjectMapper objectMapper;
+
+    @MockBean
+    EventRepository eventRepository;
+    // mock 객체이기 때문에 save를 해도 저장되지 않으므로 오류 날것 --> Mockito 사용하여 해결한다.
 
     @Test
     public void createEvent() {
@@ -36,6 +42,9 @@ public class EventControllerTest {
                 .endEventDateTime(LocalDateTime.of(2019,3,15,20,30))
                 .basePrice(100).maxPrice(200).limitOfEnrollment(100).location("수서역")
                 .build();
+
+        event.setId(10);
+        Mockito.when(eventRepository.save(event)).thenReturn(event);    // repository
 
         try {
             mockMvc.perform(post("/api/events/")
