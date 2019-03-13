@@ -7,7 +7,6 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -31,12 +30,43 @@ public class EventControllerTest {
     @Autowired
     ObjectMapper objectMapper;
 
-    @MockBean
-    EventRepository eventRepository;
-    // mock 객체이기 때문에 save를 해도 저장되지 않으므로 오류 날것 --> Mockito 사용하여 해결한다.
+    @Test   // 7-1. DTO에 해당하는 값들만 넣었을 때 확인하기 위하여 Dto로 받는다.
+    public void createEvent() throws Exception {
+        EventDto eventDto = EventDto.builder()
+                .name("jh-event").description("jh-des")
+                .beginEnrollmentDateTime(LocalDateTime.of(2019,3,11,16,44))
+                .closeEnrollmentDateTime(LocalDateTime.of(2019,3,11,16,50))
+                .beginEventDateTime(LocalDateTime.of(2019,3,15,18,30))
+                .endEventDateTime(LocalDateTime.of(2019,3,15,20,30))
+                .basePrice(100).maxPrice(200).limitOfEnrollment(100).location("수서역")
+                .build();
+        // --> 이젠 Mocking이 아니고 실제 Repository에 save된 값을 조회할 것이므로
+        // dto에 없었던 id,eventStatus는 전달되지 않을 것이다.
 
-    @Test
-    public void createEvent() {
+            mockMvc.perform(post("/api/events/")
+                    // request header 설정
+                    .contentType(MediaType.APPLICATION_JSON_UTF8)   // 요청응답 json 으로 보내겠다.
+                    .accept(MediaTypes.HAL_JSON_UTF8_VALUE)    // HAL_JSON 타입 응답만 허용하겠다.
+
+                    // request body 설정
+                    .content(objectMapper.writeValueAsString(eventDto)))    // object Mapper로 event 요청 json 형식으로 바꾼다.
+
+                    // reponse header 검증
+                    .andExpect(status().isCreated())   // created : 201 상태코드
+                    .andExpect(header().exists(HttpHeaders.LOCATION))
+                    .andExpect(header().string(HttpHeaders.CONTENT_TYPE,MediaTypes.HAL_JSON_UTF8_VALUE))
+
+                    // response body 검증
+                    .andExpect(jsonPath("id").value(Matchers.not(100)))
+                    .andExpect(jsonPath("free").value("false"))
+                    .andExpect(jsonPath("offline").value("false"))
+                    .andExpect(jsonPath("eventStatus").value(EventStatus.DRAFT))
+                    .andExpect(status().isOk())
+                    .andDo(print());
+    }
+
+    @Test   // 7-2. 누군가 입력값으로 dto가 설정한 입력값아닌 id,free같은 변수도 준다면? --> BadRequest 설정해서 돌려주기
+    public void createEvent_Bad_Request() throws Exception {
         Event event = Event.builder()
                 .id(100).name("jh-event").description("jh-des")
                 .beginEnrollmentDateTime(LocalDateTime.of(2019,3,11,16,44))
@@ -44,33 +74,22 @@ public class EventControllerTest {
                 .beginEventDateTime(LocalDateTime.of(2019,3,15,18,30))
                 .endEventDateTime(LocalDateTime.of(2019,3,15,20,30))
                 .basePrice(100).maxPrice(200).limitOfEnrollment(100).location("수서역")
-                .free(true).offline(false).eventStatus(EventStatus.BEGAN_ENROLLMENT)
+                .free(true).offline(true).eventStatus(EventStatus.PUBLISHED)
                 .build();
         // --> 이젠 Mocking이 아니고 실제 Repository에 save된 값을 조회할 것이므로
         // dto에 없었던 id,eventStatus는 전달되지 않을 것이다.
 
+        mockMvc.perform(post("/api/events/")
+                // request header 설정
+                .contentType(MediaType.APPLICATION_JSON_UTF8)   // 요청응답 json 으로 보내겠다.
+                .accept(MediaTypes.HAL_JSON_UTF8_VALUE)    // HAL_JSON 타입 응답만 허용하겠다.
 
-        try {
-            mockMvc.perform(post("/api/events/")
-                    // request header 설정
-                    .contentType(MediaType.APPLICATION_JSON_UTF8)   // 요청응답 json 으로 보내겠다.
-                    .accept(MediaTypes.HAL_JSON_UTF8_VALUE)    // HAL_JSON 타입 응답만 허용하겠다.
-                    // request body 설정
-                    .content(objectMapper.writeValueAsString(event))    // object Mapper로 event 요청 json 형식으로 바꾼다.
-            )
-                    // reponse header 검증
-                    .andExpect(status().isCreated())   // created : 201 상태코드
-                    .andExpect(header().exists(HttpHeaders.LOCATION))
-                    .andExpect(header().string(HttpHeaders.CONTENT_TYPE,MediaTypes.HAL_JSON_UTF8_VALUE))
-                    .andExpect(jsonPath("id").value(Matchers.not(100)))
-                    .andExpect(jsonPath("free").value("true"))
-                    .andExpect(jsonPath("offline").value("false"))
-                    .andExpect(jsonPath("eventStatus").value(EventStatus.DRAFT))
-                    .andDo(print());
+                // request body 설정
+                .content(objectMapper.writeValueAsString(event)))    // object Mapper로 event 요청 json 형식으로 바꾼다.
 
+                // status Badrequest(400) 검증
+                .andExpect(status().isBadRequest())
+                .andDo(print());
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 }
