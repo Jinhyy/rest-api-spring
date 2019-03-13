@@ -1,14 +1,15 @@
 package me.huk.restapispring.event;
 
 import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.validation.Errors;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+import javax.validation.Valid;
 import java.net.URI;
 
 import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
@@ -17,17 +18,32 @@ import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
 @RequestMapping(value= "/api/events", produces = MediaTypes.HAL_JSON_UTF8_VALUE)
 public class EventController {
 
-    @Autowired
-    EventRepository eventRepository;
+    private final EventRepository eventRepository;
+    private final ModelMapper modelMapper;
+    private final EventValidator eventValidator;
 
-    @Autowired
-    ModelMapper modelMapper;
+    public EventController(EventRepository eventRepository, ModelMapper modelMapper, EventValidator eventValidator) {
+        this.eventRepository = eventRepository;
+        this.modelMapper = modelMapper;
+        this.eventValidator = eventValidator;
+    }
 
     @PostMapping
-    public ResponseEntity createEvent(@RequestBody EventDto eventDto){
+    public ResponseEntity createEvent(@RequestBody @Valid EventDto eventDto, Errors errors){
+        // 8-3. data binding 검증
+        if(errors.hasErrors()){
+            return ResponseEntity.badRequest().build();
+        }
 
+        // 8-4. 비즈니스 검증위한 validator
+        eventValidator.validate(eventDto, errors);
+        if(errors.hasErrors()){
+            System.out.println(errors.getAllErrors());
+            return ResponseEntity.badRequest().build();
+        }
+
+        // 6-2. mapper 활용한 데이터 바인딩(물론 reflection이 발생하여 속도가 좀 느림)
         Event event = modelMapper.map(eventDto,Event.class);
-        // 6-2. eventDto --> event로 할당해준다.(물론 reflection이 발생하여 속도가 좀 느림)
 
         Event savedEvent = this.eventRepository.save(event);
         URI createdUri = linkTo(EventController.class).slash(savedEvent.getId()).toUri();
@@ -35,6 +51,4 @@ public class EventController {
         // ControllerLinkBuilder의 linkTo와 methodOn 기능을 사용하면 만들기 쉽다.
         return ResponseEntity.created(createdUri).body(savedEvent);
     }
-
-
 }

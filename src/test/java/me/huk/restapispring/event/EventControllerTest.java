@@ -1,6 +1,7 @@
 package me.huk.restapispring.event;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import me.huk.restapispring.common.TestDescription;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -90,6 +91,39 @@ public class EventControllerTest {
                 // status Badrequest(400) 검증
                 .andExpect(status().isBadRequest())
                 .andDo(print());
+
+    }
+
+    @Test
+    @TestDescription("8-1. 입력값 바인딩 검증. (bad request 처리)")
+    public void createEvent_Bad_Request_Empty_Input() throws Exception {
+        EventDto eventDto = EventDto.builder().build();
+
+        mockMvc.perform(post("/api/events/")
+                        .contentType(MediaType.APPLICATION_JSON_UTF8)
+                        .content(objectMapper.writeValueAsString(eventDto)))
+
+                // status Badrequest(400) 검증
+                .andExpect(status().isBadRequest())
+                .andDo(print());
+    }
+
+    @Test
+    @TestDescription("8-2. 입력값 비즈니스로직 검증(beginEvent> close 일 때")
+    public void createEvent_Bad_Request_Wrong_Input() throws Exception {
+        EventDto eventDto = EventDto.builder()
+                .name("jh-event").description("jh-des")
+                .beginEnrollmentDateTime(LocalDateTime.of(2019,3,11,16,30))
+                .closeEnrollmentDateTime(LocalDateTime.of(2019,3,11,16,50))
+                .beginEventDateTime(LocalDateTime.of(2019,3,16,18,30))
+                .endEventDateTime(LocalDateTime.of(2019,3,15,20,30))
+                .basePrice(100).maxPrice(200).limitOfEnrollment(100).location("수서역")
+                .build();
+
+        this.mockMvc.perform(post(("/api/events"))
+                .contentType(MediaType.APPLICATION_JSON_UTF8)
+                .content(objectMapper.writeValueAsString(eventDto)))
+                .andExpect(status().isBadRequest());
 
     }
 }
