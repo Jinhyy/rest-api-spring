@@ -39,7 +39,7 @@ public class EventController {
         eventValidator.validate(eventDto, errors);
         if(errors.hasErrors()){
             System.out.println(errors.getAllErrors());
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(errors);
         }
 
         // 6-2. mapper 활용한 데이터 바인딩(물론 reflection이 발생하여 속도가 좀 느림)

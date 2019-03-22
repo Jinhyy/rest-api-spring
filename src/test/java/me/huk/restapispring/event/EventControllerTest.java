@@ -31,6 +31,7 @@ public class EventControllerTest {
     @Autowired
     ObjectMapper objectMapper;
 
+
     @Test   // 7-1. DTO에 해당하는 값들만 넣었을 때 확인하기 위하여 Dto로 받는다.
     public void createEvent() throws Exception {
         EventDto eventDto = EventDto.builder()
@@ -124,6 +125,62 @@ public class EventControllerTest {
                 .contentType(MediaType.APPLICATION_JSON_UTF8)
                 .content(objectMapper.writeValueAsString(eventDto)))
                 .andExpect(status().isBadRequest());
+
+    }
+
+    @Test
+    @TestDescription("9-1. Bad Request에 관한 응답 본문 검증")
+    public void createEvent_Bad_Request_Wrong_Input_Request_Body() throws Exception {
+        EventDto eventDto = EventDto.builder()
+                .name("jh-event").description("jh-des")
+                .beginEnrollmentDateTime(LocalDateTime.of(2019,3,11,16,30))
+                .closeEnrollmentDateTime(LocalDateTime.of(2019,3,11,16,50))
+                .beginEventDateTime(LocalDateTime.of(2019,3,16,18,30))
+                .endEventDateTime(LocalDateTime.of(2019,3,15,20,30))
+                .basePrice(100).maxPrice(200).limitOfEnrollment(100).location("수서역")
+                .build();
+
+        this.mockMvc.perform(post(("/api/events"))
+                .contentType(MediaType.APPLICATION_JSON_UTF8)
+                .content(objectMapper.writeValueAsString(eventDto)))
+                .andExpect(status().isBadRequest())
+                .andDo(print())
+                .andExpect(jsonPath("$[0].objectName").exists())
+                .andExpect(jsonPath("$[0].field").exists())
+                .andExpect(jsonPath("$[0].defaultMessage").exists())
+                .andExpect(jsonPath("$[0].code").exists())
+                .andExpect(jsonPath("$[0].rejectedValue").exists())
+                ;
+    }
+
+    @Test
+    @TestDescription("9-3. 비즈니스 로직적용 테스트(장소 설정하면 offline 자동으로 true")
+    public void createEvent_Logic_Test() throws Exception {
+        EventDto eventDto = EventDto.builder()
+                .name("jh-event").description("jh-des")
+                .beginEnrollmentDateTime(LocalDateTime.of(2019,3,11,16,44))
+                .closeEnrollmentDateTime(LocalDateTime.of(2019,3,11,16,50))
+                .beginEventDateTime(LocalDateTime.of(2019,3,15,18,30))
+                .endEventDateTime(LocalDateTime.of(2019,3,15,20,30))
+                .basePrice(100)
+                .maxPrice(200)
+                .limitOfEnrollment(100)
+                .location("수서역")
+                .build();
+
+        mockMvc.perform(post("/api/events/")
+                    .contentType(MediaTypes.HAL_JSON)
+                    .accept(MediaTypes.HAL_JSON)
+                    .content(objectMapper.writeValueAsBytes(eventDto)))
+                .andDo(print())
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("id").exists())
+                .andExpect(header().exists(HttpHeaders.LOCATION))
+                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, MediaTypes.HAL_JSON.toString()))
+                .andExpect(jsonPath("free").value(false))
+                .andExpect(jsonPath("offline").value(true))
+                .andExpect(jsonPath("eventStatus").value(EventStatus.DRAFT));
+
 
     }
 }
