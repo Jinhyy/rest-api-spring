@@ -179,7 +179,11 @@ public class EventControllerTest {
                 .andExpect(header().string(HttpHeaders.CONTENT_TYPE, MediaTypes.HAL_JSON.toString()))
                 .andExpect(jsonPath("free").value(false))
                 .andExpect(jsonPath("offline").value(true))
-                .andExpect(jsonPath("eventStatus").value(EventStatus.DRAFT));
+                .andExpect(jsonPath("eventStatus").value(EventStatus.DRAFT))
+
+                // HATEOAS 확인
+                .andExpect(jsonPath("_link.self").exists())
+                .andExpect(jsonPath("query-events").exists());
 
 
     }

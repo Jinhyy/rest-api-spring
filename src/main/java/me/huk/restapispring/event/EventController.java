@@ -1,6 +1,7 @@
 package me.huk.restapispring.event;
 
 import org.modelmapper.ModelMapper;
+import org.springframework.hateoas.Link;
 import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -30,7 +31,7 @@ public class EventController {
 
     @PostMapping
     public ResponseEntity createEvent(@RequestBody @Valid EventDto eventDto, Errors errors){
-        // 8-3. data binding 검증
+        // 8-3. data binding 검증(valid 조건 및 요청이 제대로 들어갔나)
         if(errors.hasErrors()){
             return ResponseEntity.badRequest().build();
         }
@@ -49,6 +50,11 @@ public class EventController {
         URI createdUri = linkTo(EventController.class).slash(savedEvent.getId()).toUri();
         // created를 하려면 URI가 존재해야하고, Uri는 Hateoas의
         // ControllerLinkBuilder의 linkTo와 methodOn 기능을 사용하면 만들기 쉽다.
-        return ResponseEntity.created(createdUri).body(savedEvent);
+
+        // Hateoas 설정(self-rel, query-events 부분 적용)
+        EventResource eventResource = new EventResource(savedEvent);
+        eventResource.add(linkTo(EventController.class).withRel("query-events"));
+        eventResource.add(new Link(createdUri.toString()).withSelfRel());
+        return ResponseEntity.created(createdUri).body(eventResource);
     }
 }
