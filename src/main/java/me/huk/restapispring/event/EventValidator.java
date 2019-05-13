@@ -9,9 +9,10 @@ import java.time.LocalDateTime;
 public class EventValidator {
 
     /*
-        8-3. eventDto를 검증하고 발생한 에러는 erros 객체에 담는다.
+        8-3. eventDto를 검증하고 발생한 에러는 errors 객체에 담는다.
      */
     public void validate(EventDto eventDto, Errors errors){
+
         if(eventDto.getBasePrice()>eventDto.getMaxPrice()){
             errors.rejectValue("basePrice","wrongValue","Base price must smaller than Max price");
         }
